@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  postgres-db:
+    image: postgres:16-alpine
+    container_name: finguard-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "${DB_PORT}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - finguard-network
+
+  redis-cache:
+    image: redis:7.2-alpine
+    container_name: finguard-redis
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - redisdata:/data
+    command: redis-server --appendonly yes
+    networks:
+      - finguard-network
+
+volumes:
+  pgdata:
+  redisdata:
+
+networks:
+  finguard-network:
+    driver: bridge
