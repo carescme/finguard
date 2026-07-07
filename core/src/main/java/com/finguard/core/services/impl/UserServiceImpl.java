@@ -35,4 +35,16 @@ public class UserServiceImpl implements UserService {
     public Optional<User> obtenerPorEmail(String email) {
         return userRepository.findByEmail(email);
     }
+
+    @Override
+    public User loginUsuario(String email, String password) {
+        User usuario = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Credenciales incorrectas"));
+
+        if (!passwordEncoder.matches(password, usuario.getPassword())) {
+            throw new RuntimeException("Credenciales incorrectas");
+        }
+
+        return usuario;
+    }
 }

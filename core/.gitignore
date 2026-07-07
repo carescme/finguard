@@ -38,3 +38,5 @@ redis_data/
 
 # Variables de entorno y secretos
 .env
+.env-test
+**/src/main/resources/application-test.properties

@@ -1,5 +1,6 @@
 package com.finguard.core.controllers;
 
+import com.finguard.core.dto.LoginRequestDTO;
 import com.finguard.core.dto.RegisterRequestDTO;
 import com.finguard.core.dto.UserResponseDTO;
 import com.finguard.core.entities.User;
@@ -32,5 +33,17 @@ public class AuthController {
         response.setCreatedAt(usuarioGuardado.getCreatedAt());
 
         return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<UserResponseDTO> login(@RequestBody LoginRequestDTO request) {
+        User usuarioAutenticado = userService.loginUsuario(request.getEmail(), request.getPassword());
+
+        UserResponseDTO response = new UserResponseDTO();
+        response.setId(usuarioAutenticado.getId());
+        response.setEmail(usuarioAutenticado.getEmail());
+        response.setCreatedAt(usuarioAutenticado.getCreatedAt());
+
+        return ResponseEntity.ok(response);
     }
 }
