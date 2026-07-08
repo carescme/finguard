@@ -8,4 +8,5 @@ public class UserResponseDTO {
     private Long id;
     private String email;
     private LocalDateTime createdAt;
+    private String token;
 }

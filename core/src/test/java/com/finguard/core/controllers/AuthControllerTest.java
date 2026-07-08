@@ -15,6 +15,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath; // 👈 Importante para validar campos del JSON
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
@@ -38,7 +39,7 @@ class AuthControllerTest {
     }
 
     @Test
-    void deberiaRegistrarUsuarioViaHttpYDevolver201() throws Exception {
+    void testRegistrarUsuario() throws Exception {
         RegisterRequestDTO registerRequest = new RegisterRequestDTO();
         registerRequest.setEmail("test@ejemplo.com");
         registerRequest.setPassword("Password123!");
@@ -46,11 +47,13 @@ class AuthControllerTest {
         mockMvc.perform(post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(registerRequest)))
-                .andExpect(status().isCreated());
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").exists())
+                .andExpect(jsonPath("$.email").value("test@ejemplo.com"));
     }
 
     @Test
-    void deberiaLoguearUsuarioYDevolver200() throws Exception {
+    void testLoginUsuario() throws Exception {
         RegisterRequestDTO registerRequest = new RegisterRequestDTO();
         registerRequest.setEmail("login@ejemplo.com");
         registerRequest.setPassword("Password123!");
@@ -67,6 +70,9 @@ class AuthControllerTest {
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(loginRequest)))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").exists())
+                .andExpect(jsonPath("$.email").value("login@ejemplo.com")) 
+                .andExpect(jsonPath("$.token").exists());
     }
 }
