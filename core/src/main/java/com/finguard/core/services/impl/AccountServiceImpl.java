@@ -7,6 +7,7 @@ import com.finguard.core.repositories.UserRepository;
 import com.finguard.core.services.AccountService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.List;
 
 import java.math.BigDecimal;
 
@@ -33,5 +34,27 @@ public class AccountServiceImpl implements AccountService {
         nuevaCuenta.setUser(usuario);
 
         return accountRepository.save(nuevaCuenta);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Account> listarCuentasPorUsuario(String userEmail) {
+        User usuario = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        
+        return accountRepository.findByUserId(usuario.getId());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Account obtenerCuentaPorIdYUsuario(Long accountId, String userEmail) {
+        Account cuenta = accountRepository.findById(accountId)
+                .orElseThrow(() -> new RuntimeException("Cuenta no encontrada con ID: " + accountId));
+
+        if (!cuenta.getUser().getEmail().equals(userEmail)) {
+            throw new RuntimeException("Acceso denegado: Esta cuenta no te pertenece");
+        }
+
+        return cuenta;
     }
 }
