@@ -1,6 +1,7 @@
 package com.finguard.core.services.impl;
 
 import com.finguard.core.dto.CreateTransactionDTO;
+import com.finguard.core.dto.TransactionMinResponseDTO;
 import com.finguard.core.dto.TransactionResponseDTO;
 import com.finguard.core.entities.Account;
 import com.finguard.core.entities.Transaction;
@@ -121,7 +122,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<TransactionResponseDTO> obtenerHistorialCuenta(Long accountId) {
+    public List<TransactionMinResponseDTO> obtenerHistorialCuenta(Long accountId) {
         if (!accountRepository.existsById(accountId)) {
             throw new RuntimeException("La cuenta solicitada no existe");
         }
@@ -130,8 +131,27 @@ public class TransactionServiceImpl implements TransactionService {
                 .findBySourceAccountIdOrDestinationAccountIdOrderByCreatedAtDesc(accountId, accountId);
         
         return transacciones.stream()
-                .map(this::convertirADTO)
+                .map(this::convertirAMinDTO)
                 .toList();
+    }
+
+    private TransactionMinResponseDTO convertirAMinDTO(Transaction t) {
+        return TransactionMinResponseDTO.builder()
+                .id(t.getId())
+                .amount(t.getAmount())
+                .description(t.getDescription())
+                .type(t.getType())
+                .createdAt(t.getCreatedAt())
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public TransactionResponseDTO obtenerTransaccionPorId(Long transactionId) {
+        Transaction transaccion = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new RuntimeException("Transacción no encontrada con el ID: " + transactionId));
+                
+        return convertirADTO(transaccion);
     }
 
     private TransactionResponseDTO convertirADTO(Transaction t) {

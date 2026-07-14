@@ -1,6 +1,7 @@
 package com.finguard.core.controllers;
 
 import com.finguard.core.dto.CreateTransactionDTO;
+import com.finguard.core.dto.TransactionMinResponseDTO;
 import com.finguard.core.dto.TransactionResponseDTO;
 import com.finguard.core.entities.Account;
 import com.finguard.core.entities.Transaction;
@@ -92,8 +93,57 @@ public class TransactionController {
         }
 
         try {
-            List<TransactionResponseDTO> historial = transactionService.obtenerHistorialCuenta(accountId);
+            List<TransactionMinResponseDTO> historial = transactionService.obtenerHistorialCuenta(accountId);
             return ResponseEntity.ok(historial);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> obtenerDetalleTransaccion(
+            @RequestHeader("Authorization") String tokenHeader,
+            @PathVariable Long id) {
+
+        if (tokenHeader == null || !tokenHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token ausente o inválido");
+        }
+
+        String token = tokenHeader.substring(7);
+        if (!jwtUtils.validateToken(token)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token inválido o expirado");
+        }
+
+        String emailUsuarioLogueado = jwtUtils.getEmailFromToken(token);
+
+        try {
+            TransactionResponseDTO dto = transactionService.obtenerTransaccionPorId(id);
+
+            boolean esPropietario = false;
+
+            if (dto.getSourceAccountId() != null) {
+                Account origen = accountRepository.findById(dto.getSourceAccountId()).orElse(null);
+                if (origen != null && origen.getUser().getEmail().equals(emailUsuarioLogueado)) {
+                    esPropietario = true;
+                }
+            }
+
+            if (dto.getDestinationAccountId() != null) {
+                Account destino = accountRepository.findById(dto.getDestinationAccountId()).orElse(null);
+                if (destino != null && destino.getUser().getEmail().equals(emailUsuarioLogueado)) {
+                    esPropietario = true;
+                }
+            }
+
+            if (!esPropietario) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body("Acceso denegado: No tienes permiso para ver los detalles de esta transacción");
+            }
+
+            return ResponseEntity.ok(dto);
+
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
