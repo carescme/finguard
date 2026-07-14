@@ -1,6 +1,7 @@
 package com.finguard.core.services.impl;
 
 import com.finguard.core.dto.CreateTransactionDTO;
+import com.finguard.core.dto.TransactionResponseDTO;
 import com.finguard.core.entities.Account;
 import com.finguard.core.entities.Transaction;
 import com.finguard.core.entities.TransactionType;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Service
 public class TransactionServiceImpl implements TransactionService {
@@ -115,5 +117,34 @@ public class TransactionServiceImpl implements TransactionService {
     private void ingresarSaldo(Account cuenta, BigDecimal cantidad) {
         cuenta.setBalance(cuenta.getBalance().add(cantidad));
         accountRepository.save(cuenta);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TransactionResponseDTO> obtenerHistorialCuenta(Long accountId) {
+        if (!accountRepository.existsById(accountId)) {
+            throw new RuntimeException("La cuenta solicitada no existe");
+        }
+        
+        List<Transaction> transacciones = transactionRepository
+                .findBySourceAccountIdOrDestinationAccountIdOrderByCreatedAtDesc(accountId, accountId);
+        
+        return transacciones.stream()
+                .map(this::convertirADTO)
+                .toList();
+    }
+
+    private TransactionResponseDTO convertirADTO(Transaction t) {
+        return TransactionResponseDTO.builder()
+                .id(t.getId())
+                .amount(t.getAmount())
+                .description(t.getDescription())
+                .type(t.getType())
+                .createdAt(t.getCreatedAt())
+                .sourceAccountId(t.getSourceAccount() != null ? t.getSourceAccount().getId() : null)
+                .sourceAccountName(t.getSourceAccount() != null ? t.getSourceAccount().getName() : null)
+                .destinationAccountId(t.getDestinationAccount() != null ? t.getDestinationAccount().getId() : null)
+                .destinationAccountName(t.getDestinationAccount() != null ? t.getDestinationAccount().getName() : null)
+                .build();
     }
 }

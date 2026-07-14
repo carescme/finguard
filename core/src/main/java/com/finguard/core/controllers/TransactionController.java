@@ -1,11 +1,15 @@
 package com.finguard.core.controllers;
 
 import com.finguard.core.dto.CreateTransactionDTO;
+import com.finguard.core.dto.TransactionResponseDTO;
 import com.finguard.core.entities.Account;
 import com.finguard.core.entities.Transaction;
 import com.finguard.core.repositories.AccountRepository;
 import com.finguard.core.security.JwtUtils;
 import com.finguard.core.services.TransactionService;
+
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -58,6 +62,40 @@ public class TransactionController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.valueOf(422)).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/my-account/{accountId}")
+    public ResponseEntity<?> obtenerHistorial(
+            @RequestHeader("Authorization") String tokenHeader,
+            @PathVariable Long accountId) {
+
+        if (tokenHeader == null || !tokenHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token ausente o inválido");
+        }
+
+        String token = tokenHeader.substring(7);
+        if (!jwtUtils.validateToken(token)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token inválido o expirado");
+        }
+
+        String emailUsuarioLogueado = jwtUtils.getEmailFromToken(token);
+
+        Account cuenta = accountRepository.findById(accountId).orElse(null);
+        if (cuenta == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Cuenta no encontrada");
+        }
+        
+        if (!cuenta.getUser().getEmail().equals(emailUsuarioLogueado)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("Acceso denegado: No tienes permiso para ver los movimientos de esta cuenta");
+        }
+
+        try {
+            List<TransactionResponseDTO> historial = transactionService.obtenerHistorialCuenta(accountId);
+            return ResponseEntity.ok(historial);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
 }
