@@ -28,6 +28,13 @@ public class UserServiceImpl implements UserService {
         String contrasenaEncriptada = passwordEncoder.encode(user.getPassword());
         user.setPassword(contrasenaEncriptada);
 
+        if (user.getNombre() == null || user.getNombre().trim().isEmpty()) {
+            throw new IllegalArgumentException("El nombre es obligatorio para registrar un usuario");
+        }
+        if (user.getApellidos() == null || user.getApellidos().trim().isEmpty()) {
+            throw new IllegalArgumentException("Los apellidos son obligatorios para registrar un usuario");
+        }
+        
         return userRepository.save(user);
     }
 

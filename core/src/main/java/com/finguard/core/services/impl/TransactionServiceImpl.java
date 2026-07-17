@@ -112,12 +112,10 @@ public class TransactionServiceImpl implements TransactionService {
             throw new RuntimeException("Saldo insuficiente en la cuenta '" + cuenta.getName() + "'");
         }
         cuenta.setBalance(cuenta.getBalance().subtract(cantidad));
-        accountRepository.save(cuenta);
     }
 
     private void ingresarSaldo(Account cuenta, BigDecimal cantidad) {
         cuenta.setBalance(cuenta.getBalance().add(cantidad));
-        accountRepository.save(cuenta);
     }
 
     @Override
@@ -131,17 +129,24 @@ public class TransactionServiceImpl implements TransactionService {
                 .findBySourceAccountIdOrDestinationAccountIdOrderByCreatedAtDesc(accountId, accountId);
         
         return transacciones.stream()
-                .map(this::convertirAMinDTO)
+                .map(t -> convertirAMinDTO(t, accountId))
                 .toList();
     }
 
-    private TransactionMinResponseDTO convertirAMinDTO(Transaction t) {
+    private TransactionMinResponseDTO convertirAMinDTO(Transaction t, Long accountId) {
+        String sign = "+";
+        
+        if (t.getSourceAccount() != null && t.getSourceAccount().getId().equals(accountId)) {
+            sign = "-";
+        }
+    
         return TransactionMinResponseDTO.builder()
                 .id(t.getId())
                 .amount(t.getAmount())
                 .description(t.getDescription())
                 .type(t.getType())
                 .createdAt(t.getCreatedAt())
+                .sign(sign)
                 .build();
     }
 

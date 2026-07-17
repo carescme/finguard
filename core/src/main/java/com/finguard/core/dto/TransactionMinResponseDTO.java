@@ -19,4 +19,5 @@ public class TransactionMinResponseDTO {
     private String description;
     private TransactionType type;
     private LocalDateTime createdAt;
+    private String sign;
 }

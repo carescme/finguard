@@ -27,6 +27,8 @@ public class AuthController {
         User usuario = new User();
         usuario.setEmail(request.getEmail());
         usuario.setPassword(request.getPassword());
+        usuario.setNombre(request.getNombre());
+        usuario.setApellidos(request.getApellidos());
 
         User usuarioGuardado = userService.registrarUsuario(usuario);
 
