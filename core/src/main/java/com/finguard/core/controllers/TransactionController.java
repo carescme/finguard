@@ -6,14 +6,13 @@ import com.finguard.core.dto.TransactionResponseDTO;
 import com.finguard.core.entities.Account;
 import com.finguard.core.entities.Transaction;
 import com.finguard.core.repositories.AccountRepository;
-import com.finguard.core.security.JwtUtils;
+import com.finguard.core.security.SecurityUtils;
 import com.finguard.core.services.TransactionService;
-
-import java.util.List;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/transactions")
@@ -21,33 +20,20 @@ public class TransactionController {
 
     private final TransactionService transactionService;
     private final AccountRepository accountRepository;
-    private final JwtUtils jwtUtils;
+    private final SecurityUtils securityUtils;
 
-    public TransactionController(TransactionService transactionService, AccountRepository accountRepository, JwtUtils jwtUtils) {
+    public TransactionController(TransactionService transactionService, AccountRepository accountRepository, SecurityUtils securityUtils) {
         this.transactionService = transactionService;
         this.accountRepository = accountRepository;
-        this.jwtUtils = jwtUtils;
+        this.securityUtils = securityUtils;
     }
 
     @PostMapping
-    public ResponseEntity<?> procesarMovimiento(
-            @RequestHeader("Authorization") String tokenHeader,
-            @RequestBody CreateTransactionDTO request) {
-
-        if (tokenHeader == null || !tokenHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token ausente o inválido");
-        }
-
-        String token = tokenHeader.substring(7);
-        if (!jwtUtils.validateToken(token)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token inválido o expirado");
-        }
-
-        String emailUsuarioLogueado = jwtUtils.getEmailFromToken(token);
+    public ResponseEntity<?> procesarMovimiento(@RequestBody CreateTransactionDTO request) {
+        String emailUsuarioLogueado = securityUtils.getAuthenticatedUserEmail();
 
         if (request.getSourceAccountId() != null) {
-            Account cuentaOrigen = accountRepository.findById(request.getSourceAccountId())
-                    .orElse(null);
+            Account cuentaOrigen = accountRepository.findById(request.getSourceAccountId()).orElse(null);
             
             if (cuentaOrigen != null && !cuentaOrigen.getUser().getEmail().equals(emailUsuarioLogueado)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
@@ -57,7 +43,6 @@ public class TransactionController {
 
         try {
             Transaction resultado = transactionService.ejecutarTransaccion(request);
-            
             return ResponseEntity.status(HttpStatus.CREATED).body("Transacción procesada con éxito. ID: " + resultado.getId());
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
@@ -67,20 +52,8 @@ public class TransactionController {
     }
 
     @GetMapping("/my-account/{accountId}")
-    public ResponseEntity<?> obtenerHistorial(
-            @RequestHeader("Authorization") String tokenHeader,
-            @PathVariable Long accountId) {
-
-        if (tokenHeader == null || !tokenHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token ausente o inválido");
-        }
-
-        String token = tokenHeader.substring(7);
-        if (!jwtUtils.validateToken(token)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token inválido o expirado");
-        }
-
-        String emailUsuarioLogueado = jwtUtils.getEmailFromToken(token);
+    public ResponseEntity<?> obtenerHistorial(@PathVariable Long accountId) {
+        String emailUsuarioLogueado = securityUtils.getAuthenticatedUserEmail();
 
         Account cuenta = accountRepository.findById(accountId).orElse(null);
         if (cuenta == null) {
@@ -101,20 +74,8 @@ public class TransactionController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> obtenerDetalleTransaccion(
-            @RequestHeader("Authorization") String tokenHeader,
-            @PathVariable Long id) {
-
-        if (tokenHeader == null || !tokenHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token ausente o inválido");
-        }
-
-        String token = tokenHeader.substring(7);
-        if (!jwtUtils.validateToken(token)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token inválido o expirado");
-        }
-
-        String emailUsuarioLogueado = jwtUtils.getEmailFromToken(token);
+    public ResponseEntity<?> obtenerDetalleTransaccion(@PathVariable Long id) {
+        String emailUsuarioLogueado = securityUtils.getAuthenticatedUserEmail();
 
         try {
             TransactionResponseDTO dto = transactionService.obtenerTransaccionPorId(id);

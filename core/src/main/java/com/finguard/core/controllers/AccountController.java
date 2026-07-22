@@ -1,46 +1,32 @@
 package com.finguard.core.controllers;
 
-import com.finguard.core.dto.CreateAccountDTO;
 import com.finguard.core.dto.AccountListDTO;
 import com.finguard.core.dto.AccountResponseDTO;
+import com.finguard.core.dto.CreateAccountDTO;
 import com.finguard.core.entities.Account;
-import com.finguard.core.security.JwtUtils;
+import com.finguard.core.security.SecurityUtils;
 import com.finguard.core.services.AccountService;
-
-import java.util.List;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/accounts")
 public class AccountController {
 
     private final AccountService accountService;
-    private final JwtUtils jwtUtils;
+    private final SecurityUtils securityUtils;
 
-    public AccountController(AccountService accountService, JwtUtils jwtUtils) {
+    public AccountController(AccountService accountService, SecurityUtils securityUtils) {
         this.accountService = accountService;
-        this.jwtUtils = jwtUtils;
+        this.securityUtils = securityUtils;
     }
 
     @PostMapping
-    public ResponseEntity<?> crearCuenta(
-            @RequestHeader("Authorization") String tokenHeader,
-            @RequestBody CreateAccountDTO request) {
-
-        if (tokenHeader == null || !tokenHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token ausente o formato inválido");
-        }
-
-        String token = tokenHeader.substring(7);
-
-        if (!jwtUtils.validateToken(token)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token inválido o expirado");
-        }
-
-        String email = jwtUtils.getEmailFromToken(token);
+    public ResponseEntity<?> crearCuenta(@RequestBody CreateAccountDTO request) {
+        String email = securityUtils.getAuthenticatedUserEmail();
         
         Account cuentaCreada = accountService.crearCuenta(request.getName(), email);
 
@@ -56,16 +42,8 @@ public class AccountController {
     }
 
     @GetMapping
-    public ResponseEntity<?> listarMisCuentas(@RequestHeader("Authorization") String tokenHeader) {
-        if (tokenHeader == null || !tokenHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token inválido");
-        }
-        String token = tokenHeader.substring(7);
-        if (!jwtUtils.validateToken(token)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token inválido o expirado");
-        }
-
-        String email = jwtUtils.getEmailFromToken(token);
+    public ResponseEntity<List<AccountListDTO>> listarMisCuentas() {
+        String email = securityUtils.getAuthenticatedUserEmail();
         List<Account> cuentas = accountService.listarCuentasPorUsuario(email);
 
         List<AccountListDTO> response = cuentas.stream()
@@ -80,19 +58,8 @@ public class AccountController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> obtenerDetalleCuenta(
-            @RequestHeader("Authorization") String tokenHeader,
-            @PathVariable Long id) {
-            
-        if (tokenHeader == null || !tokenHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token inválido");
-        }
-        String token = tokenHeader.substring(7);
-        if (!jwtUtils.validateToken(token)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token inválido o expirado");
-        }
-
-        String email = jwtUtils.getEmailFromToken(token);
+    public ResponseEntity<?> obtenerDetalleCuenta(@PathVariable Long id) {
+        String email = securityUtils.getAuthenticatedUserEmail();
 
         try {
             Account cuenta = accountService.obtenerCuentaPorIdYUsuario(id, email);
